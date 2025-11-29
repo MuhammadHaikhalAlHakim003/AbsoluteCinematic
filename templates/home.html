@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AbsoluteCinema - Home</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        background-color: #121212;
+        color: white;
+        font-family: "Poppins", sans-serif;
+        margin: 0;
+      }
+
+      /* Navbar styled as a centered rounded pill (floating box) */
+      .site-nav {
+        position: absolute; /* sits over the hero initially but will scroll away with the page */
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        /* wider pill: prefer a large max but stay responsive */
+        width: min(1100px, 94%);
+        max-width: 1100px;
+        background: rgba(
+          15,
+          15,
+          15,
+          0.78
+        ); /* slightly more solid for contrast */
+        padding: 10px 32px; /* increase horizontal padding to make the pill longer */
+        border-radius: 999px; /* pill shape */
+        border: 1px solid rgba(255, 215, 0, 0.1);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        z-index: 999;
+        backdrop-filter: blur(6px);
+        display: flex;
+        justify-content: center;
+      }
+
+      /* Layout inside the pill */
+      .site-nav .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 8px; /* reduce container padding so pill shape stays compact */
+      }
+
+      .site-nav .navbar-brand {
+        color: #ffd700 !important;
+        font-weight: 700;
+        margin-right: 12px;
+      }
+
+      .site-nav .nav-link {
+        color: #ffd700 !important;
+      }
+
+      /* Small screens: make the pill fit width with comfortable corners */
+      @media (max-width: 576px) {
+        .site-nav {
+          left: 10px;
+          transform: none;
+          width: calc(100% - 20px);
+          padding: 8px 14px;
+          border-radius: 14px;
+          top: 12px;
+        }
+      }
+
+      /* Full-screen hero with video background */
+      .hero {
+        position: relative;
+        height: 100vh; /* full viewport height */
+        width: 100%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hero-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* crop to fill */
+        z-index: 0; /* behind the pseudo-overlay */
+      }
+
+      /* Subtle pseudo-overlay to improve text readability without a dark box */
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
+        z-index: 1; /* sits above the video but below the overlay text */
+        pointer-events: none;
+      }
+
+      .hero-overlay {
+        position: relative;
+        z-index: 2; /* sits above the video */
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+        background: transparent; /* remove dark box so video is fully visible */
+      }
+
+      /* Keep text readable on bright/dark video scenes */
+      .hero-overlay h1,
+      .hero-overlay p,
+      .hero-overlay .btn {
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      }
+
+      /* Movies section box to keep cards tidy */
+      .section-box {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 14px;
+        padding: 22px;
+      }
+
+      /* Ensure all movie poster images have the same size */
+      .movie-card {
+        background: #1e1e1e;
+        border-radius: 15px;
+        overflow: hidden;
+        transition: transform 0.3s;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .movie-card img {
+        width: 100%;
+        height: 300px; /* container height kept so cards align */
+        object-fit: contain; /* show whole image without cropping */
+        display: block;
+        background: #0f0f0f; /* letterbox background for images with different aspect ratios */
+        padding: 6px; /* small inner padding so images don't touch edges */
+      }
+
+      .movie-card .p-3 {
+        flex: 1 1 auto; /* make content area flexible so cards align */
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* Truncate long movie titles to two lines with ellipsis */
+      .movie-card h5 {
+        margin: 0;
+        /* primary technique for webkit-based browsers */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        /* standard property (where supported) */
+        line-clamp: 2;
+        /* fallback: limit height based on line-height so non-supporting browsers also truncate */
+        line-height: 1.2;
+        max-height: 2.4em; /* 2 * line-height */
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Keep the action button pinned to the bottom of the card */
+      .movie-card .p-3 .btn {
+        margin-top: auto;
+      }
+
+      .movie-card {
+        background: #1e1e1e;
+        border-radius: 15px;
+        overflow: hidden;
+        transition: transform 0.3s;
+      }
+
+      .movie-card:hover {
+        transform: scale(1.05);
+      }
+
+      footer {
+        text-align: center;
+        padding: 20px;
+        margin-top: 50px;
+        border-top: 1px solid #333;
+        color: #aaa;
+      }
+
+      /* When content scrolls beneath the fixed navbar, ensure it's visible.
+         We purposely do not add top padding to the hero (so the navbar overlays it).
+         For the main content after the hero, ensure some spacing so the fixed navbar
+         doesn't overlap interactive elements. */
+      .main-after-hero {
+        padding-top: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-lg site-nav">
+      <div class="container">
+        <a class="navbar-brand fs-3 fw-bold" href="/">AbsoluteCinema</a>
+        <div class="navbar-nav ms-auto">
+          <a class="nav-link" href="/admin">Admin Panel</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- HERO SECTION: full viewport height with video background -->
+    <section class="hero" aria-label="Hero">
+      <video class="hero-video" autoplay muted loop playsinline>
+        <!-- Using the project's existing video file under static/Vidio/BG.mp4 -->
+        <source
+          src="{{ url_for('static', filename='Vidio/BG.mp4') }}"
+          type="video/mp4"
+        />
+        <!-- Fallback image if video not available -->
+        Your browser does not support the video tag.
+      </video>
+
+      <div class="hero-overlay">
+        <div class="container">
+          <h1 class="text-warning fw-bold">Selamat Datang di AbsoluteCinema</h1>
+          <p>
+            Nikmati pengalaman menonton terbaik dengan pemesanan tiket yang
+            mudah dan cepat.
+          </p>
+          <!-- Hero CTA removed as requested -->
+        </div>
+      </div>
+    </section>
+
+    <section class="movies-section main-after-hero">
+      <div class="container">
+        <div class="section-box">
+          <h2 class="text-warning mb-4 fw-bold text-center">
+            Film Sedang Tayang
+          </h2>
+
+          <div class="row g-4">
+            {% for movie in movies %}
+            <div class="col-6 col-md-3">
+              <div
+                class="movie-card shadow h-100"
+                role="group"
+                aria-label="{{ movie.title | default('') }}"
+              >
+                <img
+                  src="{{ movie.poster }}"
+                  alt="{{ movie.title | default('') }} poster"
+                />
+                <div class="p-3">
+                  <h5
+                    class="text-warning"
+                    title="{{ movie.title | default('') }}"
+                  >
+                    {{ movie.title }}
+                  </h5>
+                  <p style="color: #ddd; font-size: 14px">
+                    {{ movie.genre }} • {{ movie.duration }} menit
+                  </p>
+                  <a
+                    href="{{ url_for('book', movie_id=movie.id) }}"
+                    class="btn btn-warning w-100 fw-bold"
+                    aria-label="Pesan tiket untuk {{ movie.title | default('') }}"
+                  >
+                    Pesan Tiket
+                  </a>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <!-- Pagination controls for movies list -->
+          <div
+            id="moviesPagination"
+            class="d-flex justify-content-center gap-2 mt-3"
+          >
+            <button id="prevPage" class="btn btn-outline-light">Prev</button>
+            <div id="pageNumbers" class="d-flex gap-1"></div>
+            <button id="nextPage" class="btn btn-outline-light">Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      // Client-side pagination: show 2 rows per page.
+      (function () {
+        const containerSelector = ".movies-section .row.g-4";
+        const itemSelector = containerSelector + ' > [class*="col-"]';
+        const items = Array.from(document.querySelectorAll(itemSelector));
+        const prevBtn = document.getElementById("prevPage");
+        const nextBtn = document.getElementById("nextPage");
+        const pageNumbersContainer = document.getElementById("pageNumbers");
+        const paginationWrap = document.getElementById("moviesPagination");
+
+        if (!items.length) {
+          paginationWrap.style.display = "none";
+          return;
+        }
+
+        let currentPage = 1;
+        let itemsPerPage = calcItemsPerPage();
+
+        function calcItemsPerPage() {
+          // On md and up (>=768px) we have 4 columns, so 2 rows => 8 items
+          // On smaller screens we use 2 columns, so 2 rows => 4 items
+          return window.innerWidth >= 768 ? 8 : 4;
+        }
+
+        function renderPageNumbers(totalPages) {
+          pageNumbersContainer.innerHTML = "";
+          for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement("button");
+            btn.className = "btn btn-sm";
+            btn.style.minWidth = "40px";
+            btn.textContent = i;
+
+            if (i === currentPage) {
+              btn.classList.add("btn-warning");
+            } else {
+              btn.classList.add("btn-outline-light");
+            }
+
+            btn.addEventListener("click", () => {
+              currentPage = i;
+              render();
+            });
+
+            pageNumbersContainer.appendChild(btn);
+          }
+        }
+
+        function render() {
+          itemsPerPage = calcItemsPerPage();
+          const totalPages = Math.max(
+            1,
+            Math.ceil(items.length / itemsPerPage)
+          );
+          if (currentPage > totalPages) currentPage = totalPages;
+
+          const start = (currentPage - 1) * itemsPerPage;
+          const end = start + itemsPerPage;
+
+          items.forEach((el, idx) => {
+            el.style.display = idx >= start && idx < end ? "" : "none";
+          });
+
+          // Update page number buttons
+          renderPageNumbers(totalPages);
+          prevBtn.disabled = currentPage <= 1;
+          nextBtn.disabled = currentPage >= totalPages;
+
+          // hide pagination if only 1 page
+          paginationWrap.style.display = totalPages > 1 ? "flex" : "none";
+        }
+
+        prevBtn.addEventListener("click", () => {
+          if (currentPage > 1) {
+            currentPage--;
+            render();
+          }
+        });
+        nextBtn.addEventListener("click", () => {
+          const totalPages = Math.max(
+            1,
+            Math.ceil(items.length / itemsPerPage)
+          );
+          if (currentPage < totalPages) {
+            currentPage++;
+            render();
+          }
+        });
+
+        // Recalculate on resize
+        let resizeTimer;
+        window.addEventListener("resize", () => {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            currentPage = 1;
+            render();
+          }, 150);
+        });
+
+        // initial render
+        render();
+      })();
+    </script>
+
+    <footer>© 2023 AbsoluteCinema — Your Movie Experience, Upgraded.</footer>
+  </body>
+</html>

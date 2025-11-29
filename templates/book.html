@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pemesanan Tiket - AbsoluteCinematic</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+        color: white;
+        font-family: "Poppins", sans-serif;
+        min-height: 100vh;
+      }
+
+      /* NAVBAR SAMA SEPERTI HOME */
+      .site-nav {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(1100px, 94%);
+        max-width: 1100px;
+        background: rgba(15, 15, 15, 0.78);
+        padding: 10px 32px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 215, 0, 0.1);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        z-index: 999;
+        backdrop-filter: blur(6px);
+      }
+
+      .site-nav .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 8px;
+      }
+
+      .site-nav .navbar-brand {
+        color: #ffd700 !important;
+        font-weight: 700;
+        margin-right: 12px;
+        font-size: 18px;
+      }
+
+      .site-nav .nav-link {
+        color: #ffd700 !important;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .site-nav .nav-link:hover {
+        color: #fff !important;
+        text-shadow: 0 0 10px #ffd700;
+      }
+
+      @media (max-width: 576px) {
+        .site-nav {
+          left: 10px;
+          transform: none;
+          width: calc(100% - 20px);
+          padding: 8px 14px;
+          border-radius: 14px;
+          top: 12px;
+        }
+      }
+
+      /* MAIN CONTENT */
+      .booking-container {
+        max-width: 1200px;
+        margin: 120px auto 40px auto;
+        padding: 0 20px;
+      }
+
+      .page-title {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .page-title h1 {
+        color: #ffd700;
+        font-size: 42px;
+        font-weight: 900;
+        text-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+        margin-bottom: 10px;
+      }
+
+      .page-title p {
+        color: #aaa;
+        font-size: 16px;
+      }
+
+      /* LAYOUT DUA KOLOM */
+      .booking-layout {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 30px;
+      }
+
+      @media (max-width: 768px) {
+        .booking-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* FORM SECTION */
+      .form-card {
+        background: rgba(30, 30, 30, 0.9);
+        border-radius: 20px;
+        padding: 30px;
+        border: 2px solid #333;
+        backdrop-filter: blur(10px);
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+      }
+
+      .form-group label {
+        display: block;
+        color: #ffd700;
+        font-weight: 700;
+        margin-bottom: 10px;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 12px 15px;
+        background: #2a2a2a;
+        border: 2px solid #444;
+        border-radius: 10px;
+        color: white;
+        font-size: 15px;
+        font-family: "Poppins", sans-serif;
+        transition: all 0.3s ease;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #ffd700;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        background: #333;
+      }
+
+      /* SEAT SELECTION */
+      .seat-card {
+        background: rgba(30, 30, 30, 0.9);
+        border-radius: 20px;
+        padding: 30px;
+        border: 2px solid #333;
+        backdrop-filter: blur(10px);
+      }
+
+      .seat-title {
+        color: #ffd700;
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 18px;
+      }
+
+      .screen {
+        background: linear-gradient(90deg, #ffd700, #ffed4e);
+        color: #000;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        letter-spacing: 2px;
+      }
+
+      .seats-grid {
+        display: grid;
+        grid-template-columns: repeat(20, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      .seat {
+        width: 100%;
+        aspect-ratio: 1;
+        background: linear-gradient(135deg, #444, #555);
+        border: 2px solid #666;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        color: white;
+        font-weight: 700;
+        font-size: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .seat:hover:not(.booked) {
+        background: linear-gradient(135deg, #666, #777);
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px rgba(255, 215, 0, 0.2);
+      }
+
+      .seat.selected {
+        background: linear-gradient(135deg, #ffd700, #ffed4e);
+        color: #000;
+        border-color: #ffd700;
+        transform: scale(1.1);
+        box-shadow: 0 8px 20px rgba(255, 215, 0, 0.5);
+      }
+
+      .seat.booked {
+        background: linear-gradient(135deg, #555, #666);
+        color: #999;
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .seat-info {
+        display: flex;
+        justify-content: space-around;
+        gap: 15px;
+        font-size: 13px;
+        padding-top: 15px;
+        border-top: 1px solid #444;
+      }
+
+      .seat-info-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .seat-info-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+      }
+
+      .dot-available {
+        background: #555;
+      }
+
+      .dot-selected {
+        background: #ffd700;
+      }
+
+      .dot-booked {
+        background: #999;
+      }
+
+      /* SUMMARY SIDEBAR */
+      .summary-card {
+        background: rgba(30, 30, 30, 0.9);
+        border-radius: 20px;
+        padding: 25px;
+        border: 2px solid #ffd700;
+        position: sticky;
+        top: 120px;
+        backdrop-filter: blur(10px);
+      }
+
+      .summary-title {
+        color: #ffd700;
+        font-weight: 700;
+        margin-bottom: 20px;
+        font-size: 18px;
+        text-align: center;
+      }
+
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #444;
+        gap: 10px;
+      }
+
+      .summary-item label {
+        color: #aaa;
+        font-size: 14px;
+        flex-shrink: 0;
+        min-width: 90px;
+      }
+
+      .summary-item .value {
+        color: #ffd700;
+        font-weight: 700;
+        font-size: 15px;
+        text-align: right;
+        flex: 1;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        min-width: 0;
+      }
+
+      .summary-item.total {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px solid #ffd700;
+        border-bottom: none;
+      }
+
+      .summary-item.total .value {
+        font-size: 24px;
+        color: #ffd700;
+      }
+
+      /* BUTTON */
+      .btn-book {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #ffd700, #ffed4e);
+        color: #000;
+        border: none;
+        border-radius: 10px;
+        font-weight: 900;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 25px;
+        box-shadow: 0 6px 20px rgba(255, 215, 0, 0.3);
+      }
+
+      .btn-book:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(255, 215, 0, 0.5);
+      }
+
+      .btn-book:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .error-msg {
+        background: rgba(220, 53, 69, 0.2);
+        color: #ff6b6b;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 4px solid #ff6b6b;
+        margin-bottom: 20px;
+        font-weight: 600;
+      }
+
+      footer {
+        text-align: center;
+        padding: 20px;
+        margin-top: 50px;
+        border-top: 1px solid #333;
+        color: #aaa;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- NAVBAR SAMA SEPERTI HOME -->
+    <nav class="site-nav">
+      <div class="container">
+        <a class="navbar-brand fs-5 fw-bold" href="/">AbsoluteCinema</a>
+        <div class="d-flex gap-3 ms-auto">
+          <a class="nav-link" href="/">Beranda</a>
+          <a class="nav-link" href="/admin">Admin Panel</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div class="booking-container">
+      <!-- PAGE TITLE -->
+      <div class="page-title">
+        <h1>{{ movie['title'] }}</h1>
+        <p>Pesan tiket Anda sekarang dengan mudah dan cepat</p>
+      </div>
+
+      {% if error %}
+      <div class="error-msg">⚠️ {{ error }}</div>
+      {% endif %}
+
+      <!-- BOOKING LAYOUT -->
+      <form action="{{ url_for('book', movie_id=movie['id']) }}" method="post">
+        <div class="booking-layout">
+          <!-- LEFT SIDE: FORM & SEATS -->
+          <div>
+            <!-- FORM CARD -->
+            <div class="form-card">
+              <h3 style="color: #ffd700; margin-bottom: 25px; font-weight: 700">
+                Informasi Pemesan
+              </h3>
+
+              <div class="form-group">
+                <label>Nama Lengkap</label>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  placeholder="Masukkan nama Anda"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="Masukkan email Anda"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Jenis Tiket</label>
+                <select name="ticket_type" id="ticketTypeSelect" required>
+                  <option value="">-- Pilih Jenis Tiket --</option>
+                  <option value="Regular">Regular - Rp 50.000</option>
+                  <option value="VIP">VIP - Rp 75.000</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Jadwal Tayang</label>
+                <select name="showtime" id="showtimeSelect" required>
+                  <option value="">-- Pilih Jadwal Tayang --</option>
+                  {% for time in movie['showtimes'] %}
+                  <option value="{{ time }}">{{ time }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <!-- SEAT CARD -->
+            <div class="seat-card" style="margin-top: 30px">
+              <div class="seat-title">Pilih Kursi Anda</div>
+              <div class="screen">LAYAR BIOSKOP</div>
+
+              <!-- SEATS GRID -->
+              <div class="seats-grid">
+                {% for seat in movie['seats'] %}
+                <div
+                  class="seat"
+                  onclick="selectSeat('{{ seat }}')"
+                  id="seat-{{ seat }}"
+                  title="{{ seat }}"
+                >
+                  {{ seat }}
+                </div>
+                {% endfor %}
+              </div>
+
+              <!-- SEAT LEGEND -->
+              <div class="seat-info">
+                <div class="seat-info-item">
+                  <div class="seat-info-dot dot-available"></div>
+                  <span>Tersedia</span>
+                </div>
+                <div class="seat-info-item">
+                  <div class="seat-info-dot dot-selected"></div>
+                  <span>Dipilih</span>
+                </div>
+                <div class="seat-info-item">
+                  <div class="seat-info-dot dot-booked"></div>
+                  <span>Terjual</span>
+                </div>
+              </div>
+
+              <input type="hidden" name="seat" id="seatInput" required />
+            </div>
+          </div>
+
+          <!-- RIGHT SIDE: SUMMARY -->
+          <div class="summary-card">
+            <div class="summary-title">RINGKASAN PESANAN</div>
+
+            <div class="summary-item">
+              <label>Film</label>
+              <div class="value">{{ movie['title'] }}</div>
+            </div>
+
+            <div class="summary-item">
+              <label>Kursi</label>
+              <div class="value" id="summarySeats">-</div>
+            </div>
+
+            <div class="summary-item">
+              <label>Jenis</label>
+              <div class="value" id="summaryType">-</div>
+            </div>
+
+            <div class="summary-item">
+              <label>Jadwal Tayang</label>
+              <div class="value" id="summaryShowtime">-</div>
+            </div>
+
+            <div class="summary-item">
+              <label>Harga Tiket</label>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: flex-end;
+                "
+              >
+                <div class="value" id="summaryPrice">-</div>
+                <div
+                  style="
+                    font-size: 12px;
+                    color: #aaa;
+                    margin-top: 8px;
+                    line-height: 1.4;
+                    white-space: normal;
+                  "
+                >
+                  <em>*Termasuk biaya admin Rp 5.000 per kursi</em>
+                </div>
+              </div>
+            </div>
+
+            <div class="summary-item total">
+              <label>Total</label>
+              <div class="value" id="summaryTotal">-</div>
+            </div>
+
+            <button type="submit" class="btn-book">Lanjut ke Konfirmasi</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <footer>© 2023 AbsoluteCinema — Your Movie Experience, Upgraded.</footer>
+
+    <!-- BOOTSTRAP JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Data booked seats by showtime and ticket type (dari backend)
+      let bookedSeatsByShowtime = {};
+      {% for showtime, ticket_types in booked_seats_by_showtime.items() %}
+      bookedSeatsByShowtime["{{ showtime }}"] = {
+        "Regular": {{ ticket_types['Regular'] | tojson }},
+        "VIP": {{ ticket_types['VIP'] | tojson }}
+      };
+      {% endfor %}
+
+      let currentBookedSeats = [];
+
+      // Array to store selected seats
+      let selectedSeats = [];
+
+      function updateBookedSeatsDisplay() {
+        // Get current showtime and ticket type
+        const showtime = document.querySelector(
+          'select[name="showtime"]'
+        ).value;
+        const ticketType = document.querySelector(
+          'select[name="ticket_type"]'
+        ).value;
+
+        // Update currentBookedSeats based on selected showtime and ticket type
+        if (bookedSeatsByShowtime[showtime] && bookedSeatsByShowtime[showtime][ticketType]) {
+          currentBookedSeats = bookedSeatsByShowtime[showtime][ticketType];
+        } else {
+          currentBookedSeats = [];
+        }
+
+        // Update visual display of all seats
+        const allSeats = document.querySelectorAll(".seat");
+        allSeats.forEach((seatEl) => {
+          const seatId = seatEl.id.replace("seat-", "");
+
+          if (currentBookedSeats.includes(seatId)) {
+            seatEl.classList.add("booked");
+          } else {
+            seatEl.classList.remove("booked");
+          }
+        });
+      }
+
+      function selectSeat(seat) {
+        const el = document.getElementById("seat-" + seat);
+
+        if (!el || el.classList.contains("booked")) {
+          return; // Can't select booked seats
+        }
+
+        // Toggle seat selection
+        if (el.classList.contains("selected")) {
+          el.classList.remove("selected");
+          selectedSeats = selectedSeats.filter((s) => s !== seat);
+        } else {
+          el.classList.add("selected");
+          selectedSeats.push(seat);
+        }
+
+        // Update form and summary
+        document.getElementById("seatInput").value = selectedSeats.join(", ");
+        updateSummary();
+      }
+
+      function updateSummary() {
+        const seatsText = selectedSeats.join(", ") || "-";
+        const ticketType = document.querySelector(
+          'select[name="ticket_type"]'
+        ).value;
+        const showtime =
+          document.querySelector('select[name="showtime"]').value || "-";
+
+        document.getElementById("summarySeats").textContent = seatsText;
+        document.getElementById("summaryType").textContent =
+          ticketType || "-";
+        document.getElementById("summaryShowtime").textContent = showtime;
+
+        // Only show price if ticket type is selected and seats are selected
+        if (ticketType && selectedSeats.length > 0) {
+          const pricePerSeat = ticketType === "VIP" ? 75000 : 50000;
+          const adminFeePerSeat = 5000; // Biaya admin per kursi
+          const totalPricePerSeat = pricePerSeat + adminFeePerSeat;
+          const totalPrice = totalPricePerSeat * selectedSeats.length;
+
+          document.getElementById("summaryPrice").textContent =
+            "Rp " + totalPricePerSeat.toLocaleString("id-ID");
+          document.getElementById("summaryTotal").textContent =
+            "Rp " + totalPrice.toLocaleString("id-ID");
+        } else {
+          document.getElementById("summaryPrice").textContent = "-";
+          document.getElementById("summaryTotal").textContent = "-";
+        }
+      }      function clearSeats() {
+        // Clear all selected seats visually and in array
+        selectedSeats.forEach((seat) => {
+          const el = document.getElementById("seat-" + seat);
+          if (el) {
+            el.classList.remove("selected");
+          }
+        });
+        selectedSeats = [];
+        document.getElementById("seatInput").value = "";
+        updateSummary();
+      }
+
+      // Event listener untuk jenis tiket
+      document
+        .querySelector('select[name="ticket_type"]')
+        .addEventListener("change", function () {
+          // Reset jadwal tayang
+          document.querySelector('select[name="showtime"]').value = "";
+          // Reset kursi
+          clearSeats();
+          updateBookedSeatsDisplay();
+          updateSummary();
+        });
+
+      // Event listener untuk jadwal tayang
+      document
+        .querySelector('select[name="showtime"]')
+        .addEventListener("change", function () {
+          // Update booked seats display based on selected showtime
+          updateBookedSeatsDisplay();
+          // Reset kursi saat jadwal berubah
+          clearSeats();
+          updateSummary();
+        });
+
+      // Initialize on page load
+      updateBookedSeatsDisplay();
+      updateSummary();
+    </script>
+  </body>
+</html>
