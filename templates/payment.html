@@ -430,7 +430,7 @@
             <div class="status-badge" id="statusBadge">
               <div class="status-icon" id="statusIcon">
                 <img
-                  src="{{ url_for('static', filename='Vidio/loading.gif') }}"
+                  src="{{ url_for('static', filename='images/loading.gif') }}"
                   alt="loading"
                 />
               </div>
@@ -690,7 +690,7 @@
           badge.style.borderColor = "#4CAF50";
           icon.innerHTML =
             '<img src="' +
-            "{{ url_for('static', filename='Vidio/checkmark.gif') }}" +
+            "{{ url_for('static', filename='images/checkmark.gif') }}" +
             '" alt="checkmark" />';
           title.style.color = "#4CAF50";
           title.textContent = "Pembayaran Berhasil!";
