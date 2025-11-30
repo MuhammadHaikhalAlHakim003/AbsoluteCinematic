@@ -26,10 +26,8 @@
 
       /* NAVBAR SAMA SEPERTI HOME */
       .site-nav {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: relative; /* non-fixed so it scrolls with the page */
+        margin: 20px auto;
         width: min(1100px, 94%);
         max-width: 1100px;
         background: rgba(15, 15, 15, 0.78);
@@ -70,12 +68,10 @@
 
       @media (max-width: 576px) {
         .site-nav {
-          left: 10px;
-          transform: none;
+          margin: 12px auto;
           width: calc(100% - 20px);
           padding: 8px 14px;
           border-radius: 14px;
-          top: 12px;
         }
       }
 
@@ -219,6 +215,13 @@
         <a class="navbar-brand fs-5 fw-bold" href="/">AbsoluteCinema</a>
         <div class="d-flex gap-3 ms-auto">
           <a class="nav-link" href="/">Beranda</a>
+          {% if session.get('user') %}
+          <a class="nav-link" href="#">{{ session.get('user')['name'] }}</a>
+          <a class="nav-link" href="/logout">Logout</a>
+          {% else %}
+          <a class="nav-link" href="/login">Login</a>
+          <a class="nav-link" href="/register">Register</a>
+          {% endif %}
         </div>
       </div>
     </nav>
@@ -257,6 +260,7 @@
                 <th style="width: 60px">No</th>
                 <th>Nama Customer</th>
                 <th>Email</th>
+                <th>Membership</th>
                 <th>Film</th>
                 <th style="width: 80px">Kursi</th>
                 <th style="width: 100px">Jadwal Tayang</th>
@@ -271,6 +275,7 @@
                 <td>{{ loop.index }}</td>
                 <td>{{ order.customer }}</td>
                 <td>{{ order.email }}</td>
+                <td>{{ order.get('membership', 'guest') | upper }}</td>
                 <td>{{ order.movie_title }}</td>
                 <td>{{ order.seat }}</td>
                 <td>{{ order.showtime }}</td>

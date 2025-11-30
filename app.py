@@ -1,8 +1,183 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from datetime import datetime
+import sqlite3
+import os
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Diperlukan untuk menggunakan session
+
+# Database file
+DB_PATH = os.path.join(os.path.dirname(__file__), 'database.db')
+
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            membership TEXT NOT NULL DEFAULT 'member',
+            created_at TEXT
+        )
+        '''
+    )
+    # Ensure 'role' column exists for admin/user roles
+    cur.execute("PRAGMA table_info(users)")
+    cols = [r[1] for r in cur.fetchall()]
+    if 'role' not in cols:
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
+        except Exception:
+            pass
+    # orders table
+    cur.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            movie_id INTEGER,
+            movie_title TEXT,
+            seat TEXT,
+            ticket_type TEXT,
+            showtime TEXT,
+            ticket_price INTEGER,
+            admin_fee INTEGER,
+            price INTEGER,
+            membership TEXT,
+            snack_included INTEGER DEFAULT 0,
+            customer TEXT,
+            email TEXT,
+            date TEXT,
+            payment_method TEXT
+        )
+        '''
+    )
+    conn.commit()
+    conn.close()
+
+
+def create_user(name, email, password, membership='member'):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    hashed = generate_password_hash(password)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    try:
+        cur.execute("INSERT INTO users (name, email, password, membership, created_at, role) VALUES (?, ?, ?, ?, ?, ?)",
+                    (name, email, hashed, membership, now, 'user'))
+        conn.commit()
+        user_id = cur.lastrowid
+    except sqlite3.IntegrityError:
+        conn.close()
+        return None
+    conn.close()
+    return get_user_by_id(user_id)
+
+
+def get_user_by_email(email):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def get_user_by_id(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def save_order_db(order):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO orders (movie_id, movie_title, seat, ticket_type, showtime, ticket_price, admin_fee, price, membership, snack_included, customer, email, date, payment_method)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            order.get('movie_id'),
+            order.get('movie_title'),
+            order.get('seat'),
+            order.get('ticket_type'),
+            order.get('showtime'),
+            order.get('ticket_price'),
+            order.get('admin_fee'),
+            order.get('price'),
+            order.get('membership'),
+            1 if order.get('snack_included') else 0,
+            order.get('customer'),
+            order.get('email'),
+            order.get('date'),
+            order.get('payment_method', '')
+        )
+    )
+    conn.commit()
+    oid = cur.lastrowid
+    conn.close()
+    return oid
+
+
+def get_all_orders_db():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM orders ORDER BY id DESC")
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_orders_by_user_email(email):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM orders WHERE email = ? ORDER BY id DESC", (email,))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_booked_seats_db(movie_id, showtime, ticket_type):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # Select seats from orders that match movie_id and showtime; ticket_type optional
+    if ticket_type:
+        cur.execute("SELECT seat FROM orders WHERE movie_id = ? AND showtime = ? AND ticket_type = ?", (movie_id, showtime, ticket_type))
+    else:
+        cur.execute("SELECT seat FROM orders WHERE movie_id = ? AND showtime = ?", (movie_id, showtime))
+    rows = cur.fetchall()
+    conn.close()
+    seats = []
+    for r in rows:
+        s = r['seat'] or ''
+        for part in s.split(','):
+            p = part.strip()
+            if p and p not in seats:
+                seats.append(p)
+    return seats
+
+
+def apply_membership_discount(price, membership):
+    """Return price after applying membership discount (member=2%, vip=5%)."""
+    if membership == 'member':
+        return int(price * 0.98)
+    if membership == 'vip':
+        return int(price * 0.95)
+    return price
 
 
 # HELPER FUNCTION
@@ -24,6 +199,37 @@ def format_currency(value):
 
 # Register filter
 app.jinja_env.filters['format_currency'] = format_currency
+
+
+# --- Authorization helpers ---
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = session.get('user')
+        if not user:
+            flash('Silakan login terlebih dulu')
+            return redirect(url_for('login'))
+        # check role from session; fallback to DB lookup
+        if user.get('role') == 'admin':
+            return f(*args, **kwargs)
+        # try retrieving fresh role from DB
+        db_user = get_user_by_id(user.get('id'))
+        if db_user and 'role' in db_user.keys() and db_user['role'] == 'admin':
+            # refresh session role
+            session['user']['role'] = 'admin'
+            return f(*args, **kwargs)
+        flash('Akses ditolak: hanya admin yang dapat mengakses halaman ini')
+        return redirect(url_for('home'))
+    return decorated
 
 
 # DATA FILM (STATIC)
@@ -161,7 +367,7 @@ class Customer(User):
         self.history = []
 
     def book_ticket(self, movie_id, seat, ticket_type):
-        ticket = Ticket(seat, ticket_type)
+        ticket = create_ticket(ticket_type, seat)
         price = ticket.calculate_price()
 
         # ambil judul film untuk disimpan di order
@@ -198,6 +404,26 @@ class Ticket:
         return 75000 if self.ticket_type == "VIP" else 50000
 
 
+class VIPTicket(Ticket):
+    def calculate_price(self):
+        return 75000
+
+
+def create_ticket(ticket_type, seat):
+    """Factory to create appropriate Ticket subclass based on ticket_type.
+
+    Polymorphism: VIP seat type has its own subclass; membership discounts are
+    applied during booking (guest/member/vip).
+    """
+    if not ticket_type:
+        return Ticket(seat, "Regular")
+
+    t = ticket_type.strip().lower()
+    if t == "vip":
+        return VIPTicket(seat, "VIP")
+    return Ticket(seat, "Regular")
+
+
 
 # ROUTES
 @app.route('/')
@@ -213,8 +439,17 @@ def book(movie_id):
         return "Movie not found", 404
 
     if request.method == 'POST':
-        name = request.form['name']
-        email = request.form['email']
+        # If user logged in, use their account info; otherwise use form inputs
+        user = session.get('user')
+        if user:
+            name = user.get('name')
+            email = user.get('email')
+            membership = user.get('membership', 'member')
+        else:
+            name = request.form['name']
+            email = request.form['email']
+            membership = 'guest'
+
         seats_input = request.form['seat'].strip()
         ticket_type = request.form['ticket_type']
         showtime = request.form.get('showtime', '')  # Get showtime from form
@@ -237,30 +472,19 @@ def book(movie_id):
                                 booked_seats_by_showtime[st][ticket_type].append(seat)
             return render_template("book.html", movie=movie, error=error, booked_seats_by_showtime=booked_seats_by_showtime)
 
-        # ====== VALIDASI SEAT SUDAH DIPESAN ======
-        # Parse all booked seats for the selected showtime and ticket type
-        booked_seats_set = set()
-        for order in orders:
-            if order['movie_id'] == movie_id and order['showtime'] == showtime and order['ticket_type'] == ticket_type:
-                seats = [s.strip() for s in order['seat'].split(',')]
-                booked_seats_set.update(seats)
-        booked_seats = list(booked_seats_set)
-        
+        # ====== VALIDASI SEAT SUDAH DIPESAN (menggunakan DB) ======
+        booked_seats = get_booked_seats_db(movie_id, showtime, ticket_type)
         unavailable_seats = [seat for seat in seat_list if seat in booked_seats]
 
         if unavailable_seats:
             error = f"Kursi {', '.join(unavailable_seats)} sudah dipesan!"
-            # Build booked_seats_by_showtime for error case
+            # Build booked_seats_by_showtime for error case using DB
             booked_seats_by_showtime = {}
             for st in movie['showtimes']:
                 booked_seats_by_showtime[st] = {"Regular": [], "VIP": []}
-                for order in orders:
-                    if order['movie_id'] == movie_id and order['showtime'] == st:
-                        ticket_type_order = order.get('ticket_type', 'Regular')
-                        seats = [s.strip() for s in order['seat'].split(',')]
-                        for seat in seats:
-                            if seat not in booked_seats_by_showtime[st][ticket_type_order]:
-                                booked_seats_by_showtime[st][ticket_type_order].append(seat)
+                for ttype in ["Regular", "VIP"]:
+                    seats = get_booked_seats_db(movie_id, st, ttype)
+                    booked_seats_by_showtime[st][ttype] = seats
             return render_template("book.html", movie=movie, error=error, booked_seats_by_showtime=booked_seats_by_showtime)
 
         # Create customer and book tickets for each seat
@@ -268,12 +492,15 @@ def book(movie_id):
         
         # For simplicity, we'll create one order entry with all seats
         # You can modify this to create separate orders per seat if needed
-        ticket = Ticket(seat_list[0], ticket_type)
+        ticket = create_ticket(ticket_type, seat_list[0])
         ticket_price_per_seat = ticket.calculate_price()
+        # Apply membership discount via helper
+        discounted_price_per_seat = apply_membership_discount(ticket_price_per_seat, membership)
         admin_fee_per_seat = 5000  # Biaya admin per kursi
-        ticket_price = ticket_price_per_seat * len(seat_list)  # Total harga tiket tanpa admin
+        ticket_price = discounted_price_per_seat * len(seat_list)  # Total harga tiket tanpa admin
         admin_fee_total = admin_fee_per_seat * len(seat_list)  # Total biaya admin
         price = ticket_price + admin_fee_total  # Total pembayaran (termasuk admin)
+        snack_included = True if membership == 'vip' else False
 
         # ambil judul film untuk disimpan di order
         movie_title = next((m['title'] for m in movies if m['id'] == movie_id), "")
@@ -288,13 +515,15 @@ def book(movie_id):
             "ticket_price": ticket_price,  # Harga tiket tanpa admin
             "admin_fee": admin_fee_total,  # Biaya admin total
             "price": price,  # Total pembayaran (termasuk admin)
+            "membership": membership,
+            "snack_included": snack_included,
             "customer": customer.get_name(),
             "email": customer.get_email(),
             "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "payment_method": ""  # Will be set during payment
         }
 
-        # Simpan order di session (bukan di orders list) sampai pembayaran selesai
+        # Simpan order di session (pending) sampai pembayaran selesai
         session['pending_order'] = order
 
         # kirim seat dan price eksplisit supaya payment.html bisa menggunakan {{ seat }} dan {{ price }}
@@ -315,7 +544,9 @@ def book(movie_id):
                     if seat not in booked_seats_by_showtime[showtime][ticket_type]:
                         booked_seats_by_showtime[showtime][ticket_type].append(seat)
     
-    return render_template('book.html', movie=movie, booked_seats_by_showtime=booked_seats_by_showtime)
+    # Pass current user's membership to template (for client-side price preview)
+    membership = session.get('user', {}).get('membership') if session.get('user') else 'guest'
+    return render_template('book.html', movie=movie, booked_seats_by_showtime=booked_seats_by_showtime, membership=membership)
 
 
 # route fallback (tetap ada)
@@ -337,12 +568,13 @@ def finish():
     payment_method = request.form.get('payment_method', 'N/A')
     pending_order['payment_method'] = payment_method
     
-    # Sekarang tambahkan order ke orders list (pembayaran sudah dikonfirmasi)
-    orders.append(pending_order)
-    
+    # Sekarang simpan order ke database (pembayaran sudah dikonfirmasi)
+    oid = save_order_db(pending_order)
+    pending_order['id'] = oid
+
     # Hapus dari session
     session.pop('pending_order', None)
-    
+
     movie_id = pending_order['movie_id']
     movie = next((m for m in movies if m['id'] == movie_id), None)
     
@@ -354,12 +586,107 @@ def finish():
 
 
 @app.route('/admin')
+@admin_required
 def admin():
-    admin_user = Admin("Admin", "admin@cinema.com")
-    all_orders = admin_user.view_all_orders()
+    # read orders from DB
+    all_orders = get_all_orders_db()
     return render_template('admin.html', orders=all_orders, movies=movies)
 
 
-# RUN
+@app.route('/users')
+@admin_required
+def list_users():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, email, membership, role, created_at FROM users ORDER BY id DESC")
+    rows = cur.fetchall()
+    conn.close()
+    users = [dict(r) for r in rows]
+    return render_template('users.html', users=users)
+
+
+@app.route('/profile')
+def profile():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    user = session['user']
+    orders = get_orders_by_user_email(user['email'])
+    return render_template('profile.html', user=user, orders=orders)
+
+
+@app.route('/admin/upgrade/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_upgrade(user_id):
+    # Upgrade user membership to VIP (admin action)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET membership = 'vip' WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('list_users'))
+
+
+# ---------- AUTH ROUTES ----------
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        membership = request.form.get('membership', 'member')
+
+        if not name or not email or not password:
+            flash('Lengkapi semua field')
+            return render_template('register.html')
+
+        existing = get_user_by_email(email)
+        if existing:
+            flash('Email sudah terdaftar')
+            return render_template('register.html')
+
+        user = create_user(name, email, password, membership)
+        if not user:
+            flash('Gagal membuat user (email mungkin sudah terpakai)')
+            return render_template('register.html')
+
+        # Auto-login setelah registrasi
+        # `user` is a sqlite3.Row which doesn't implement .get(), so access safely
+        role = user['role'] if user and 'role' in user.keys() else 'user'
+        session['user'] = { 'id': user['id'], 'name': user['name'], 'email': user['email'], 'membership': user['membership'], 'role': role }
+        return redirect(url_for('home'))
+
+    return render_template('register.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = get_user_by_email(email)
+        if not user:
+            flash('Email tidak ditemukan')
+            return render_template('login.html')
+
+        if not check_password_hash(user['password'], password):
+            flash('Password salah')
+            return render_template('login.html')
+
+        # `user` is sqlite3.Row; read role safely
+        role = user['role'] if user and 'role' in user.keys() else 'user'
+        session['user'] = { 'id': user['id'], 'name': user['name'], 'email': user['email'], 'membership': user['membership'], 'role': role }
+        return redirect(url_for('home'))
+
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('home'))
+
+
 if __name__ == '__main__':
+    # Initialize database (users table)
+    init_db()
     app.run(debug=True)
