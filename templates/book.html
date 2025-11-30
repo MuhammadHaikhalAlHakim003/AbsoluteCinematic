@@ -26,10 +26,8 @@
 
       /* NAVBAR SAMA SEPERTI HOME */
       .site-nav {
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: relative; /* non-fixed so it scrolls with the page */
+        margin: 20px auto;
         width: min(1100px, 94%);
         max-width: 1100px;
         background: rgba(15, 15, 15, 0.78);
@@ -70,12 +68,10 @@
 
       @media (max-width: 576px) {
         .site-nav {
-          left: 10px;
-          transform: none;
+          margin: 12px auto;
           width: calc(100% - 20px);
           padding: 8px 14px;
           border-radius: 14px;
-          top: 12px;
         }
       }
 
@@ -380,6 +376,13 @@
         <div class="d-flex gap-3 ms-auto">
           <a class="nav-link" href="/">Beranda</a>
           <a class="nav-link" href="/admin">Admin Panel</a>
+          {% if session.get('user') %}
+          <a class="nav-link" href="#">{{ session.get('user')['name'] }}</a>
+          <a class="nav-link" href="/logout">Logout</a>
+          {% else %}
+          <a class="nav-link" href="/login">Login</a>
+          <a class="nav-link" href="/register">Register</a>
+          {% endif %}
         </div>
       </div>
     </nav>
@@ -552,6 +555,7 @@
 
     <script>
       // Data booked seats by showtime and ticket type (dari backend)
+      const userMembership = "{{ membership }}";
       let bookedSeatsByShowtime = {};
       {% for showtime, ticket_types in booked_seats_by_showtime.items() %}
       bookedSeatsByShowtime["{{ showtime }}"] = {
@@ -630,7 +634,14 @@
 
         // Only show price if ticket type is selected and seats are selected
         if (ticketType && selectedSeats.length > 0) {
-          const pricePerSeat = ticketType === "VIP" ? 75000 : 50000;
+          let pricePerSeat = ticketType === "VIP" ? 75000 : 50000;
+
+          // Apply membership discount preview (guest/member/vip)
+          let discount = 0;
+          if (userMembership === 'member') discount = 0.02;
+          else if (userMembership === 'vip') discount = 0.05;
+          pricePerSeat = Math.round(pricePerSeat * (1 - discount));
+
           const adminFeePerSeat = 5000; // Biaya admin per kursi
           const totalPricePerSeat = pricePerSeat + adminFeePerSeat;
           const totalPrice = totalPricePerSeat * selectedSeats.length;
