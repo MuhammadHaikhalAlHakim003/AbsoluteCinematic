@@ -484,5 +484,5 @@ Course: Pemrograman Berbasis Objek (PBO)
 Term: Semester 3, 2025
 
 Last Updated: December 2025
-Version: 1.3.1
+Version: 1.3.2
 Repository: https://github.com/MuhammadHaikhalAlHakim003/AbsoluteCinematic

@@ -75,8 +75,10 @@
         <a class="navbar-brand fs-5 fw-bold" href="/">AbsoluteCinema</a>
         <div class="d-flex gap-3 ms-auto">
           <a class="nav-link" href="/">Beranda</a>
+          {% if session.get('user') and session.get('user').get('role') ==
+          'admin' %}
           <a class="nav-link" href="/admin">Admin Panel</a>
-          {% if session.get('user') %}
+          {% endif %} {% if session.get('user') %}
           <a class="nav-link" href="/profile"
             >{{ session.get('user')['name'] }}</a
           >
