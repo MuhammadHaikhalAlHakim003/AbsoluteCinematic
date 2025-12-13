@@ -410,11 +410,6 @@ class VIPTicket(Ticket):
 
 
 def create_ticket(ticket_type, seat):
-    """Factory to create appropriate Ticket subclass based on ticket_type.
-
-    Polymorphism: VIP seat type has its own subclass; membership discounts are
-    applied during booking (guest/member/vip).
-    """
     if not ticket_type:
         return Ticket(seat, "Regular")
 

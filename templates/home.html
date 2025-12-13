@@ -215,8 +215,10 @@
       <div class="container">
         <a class="navbar-brand fs-3 fw-bold" href="/">AbsoluteCinema</a>
         <div class="navbar-nav ms-auto">
+          {% if session.get('user') and session.get('user').get('role') ==
+          'admin' %}
           <a class="nav-link" href="/admin">Admin Panel</a>
-          {% if session.get('user') %}
+          {% endif %} {% if session.get('user') %}
           <a class="nav-link" href="/profile"
             >Hello, {{ session.get('user')['name'] }}</a
           >
