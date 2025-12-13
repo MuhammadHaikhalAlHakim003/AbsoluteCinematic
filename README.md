@@ -1,168 +1,488 @@
-# AbsoluteCinema
+# AbsoluteCinematic - Web Application for Cinema Ticket Booking
 
-AbsoluteCinema adalah aplikasi web sederhana berbasis Flask untuk pemesanan tiket bioskop. Aplikasi ini dibuat untuk kebutuhan tugas UAS mata kuliah Pemrograman Berbasis Objek dan mendemonstrasikan konsep OOP, persistensi data, autentikasi, serta alur booking sederhana.
+## Deskripsi Proyek
 
-File penting di repo:
+AbsoluteCinematic adalah aplikasi web untuk pemesanan tiket bioskop yang dibangun menggunakan Flask. Aplikasi ini dikembangkan sebagai tugas UAS mata kuliah Pemrograman Berbasis Objek (PBO) dan mendemonstrasikan implementasi konsep-konsep Object-Oriented Programming, persistensi data, autentikasi pengguna, dan alur bisnis booking tiket.
 
-- `app.py` — aplikasi Flask utama (routes, OOP classes, helper, DB helpers)
-- `templates/` — folder template Jinja2 (home, book, login, register, profile, admin, invoice, dll.)
-- `static/` — file statis (css, images, videos)
-- `database.db` — SQLite database (dibuat otomatis saat pertama kali menjalankan app)
-- `scripts/seed_admin.py` — script untuk membuat/mengubah user menjadi admin
-- `docs/class_diagram.puml` — file PlantUML untuk class diagram (OOP)
+**Platform**: Web Application (Python + Flask)  
+**Database**: SQLite3  
+**Frontend**: Jinja2 Templates + Bootstrap 5.3.0 + Custom CSS  
+**Authentication**: Session-based dengan password hashing (Werkzeug)
 
 ---
 
-## Ringkasan Fitur
+## Tujuan Pembelajaran
 
-- Registrasi dan login pengguna (password di-hash menggunakan Werkzeug)
-- Booking tiket: pilih film, jadwal, kursi; hitung harga termasuk diskon membership dan biaya admin
-- Payment (simulasi): menyimpan order ke SQLite dan menampilkan invoice
-- Profile: menampilkan riwayat pemesanan pengguna
-- Admin: melihat semua orders dan daftar users; meng-upgrade user menjadi VIP
-- OOP: kelas `User`, `Customer`, `Admin`, `Ticket`, `VIPTicket` dan factory `create_ticket()` (polymorphism)
+Aplikasi ini dirancang untuk mendemonstrasikan:
+
+1. **Object-Oriented Programming (OOP)**
+
+   - Enkapsulasi melalui class `User`, `Customer`, `Admin`
+   - Inheritance untuk hierarki pengguna
+   - Polymorphism pada class `Ticket` dan `VIPTicket`
+   - Design pattern Factory (`create_ticket()`)
+
+2. **Persistensi Data**
+
+   - Integrasi SQLite3 sebagai database relasional
+   - Query dinamis dan transaction handling
+   - Skema database dengan constraints dan relationships
+
+3. **Keamanan Aplikasi**
+
+   - Password hashing menggunakan `werkzeug.security`
+   - Session management untuk autentikasi
+   - Role-based access control (RBAC) dengan decorator `@admin_required`
+   - Input validation dan SQL injection prevention
+
+4. **Alur Bisnis Aplikasi**
+   - User registration & authentication flow
+   - Complete booking workflow (film selection → seat selection → payment → invoice)
+   - Order management dan history tracking
+   - Admin dashboard untuk monitoring
 
 ---
 
-## Persiapan & Instalasi (Windows, PowerShell)
+## Struktur File Proyek
 
-1. Buka PowerShell, pindah ke direktori proyek:
-
-```powershell
-cd "c:\Disc D\Kuliah\Kuliah Semester 3\Pemrograman Berbasis Objek\UAS\AbsoluteCinematic"
+```
+AbsoluteCinematic/
+├── app.py                          # Flask application utama (routes, business logic, database)
+├── database.db                      # SQLite database (auto-generated)
+├── README.md                        # Dokumentasi proyek (file ini)
+├── templates/                       # Jinja2 HTML templates
+│   ├── home.html                   # Landing page dengan daftar film
+│   ├── login.html                  # Halaman login
+│   ├── register.html               # Halaman registrasi
+│   ├── book.html                   # Halaman pemilihan film & jadwal
+│   ├── payment.html                # Halaman pemilihan metode pembayaran
+│   ├── invoice.html                # Halaman invoice & konfirmasi
+│   ├── profile.html                # Halaman riwayat pemesanan user
+│   ├── admin.html                  # Dashboard admin (statistik)
+│   └── users.html                  # Halaman manajemen user untuk admin
+├── static/                          # File statis
+│   ├── css/
+│   │   └── style.css               # Custom CSS styling
+│   ├── images/                     # Folder untuk gambar (movie posters, dll)
+│   └── videos/                     # Folder untuk video (hero video, dll)
+└── scripts/
+    └── seed_admin.py               # Script untuk membuat user admin
 ```
 
-2. (Rekomendasi) Buat dan aktifkan virtual environment:
+---
+
+## Fitur Utama Aplikasi
+
+### 1. User Management
+
+- Registrasi Pengguna: Form registrasi dengan validasi email unik
+- Login/Logout: Session-based authentication dengan password hashing
+- Profile Management: Lihat data pengguna dan riwayat pemesanan
+- Role-Based Access: Admin dan Customer dengan privilege berbeda
+
+### 2. Cinema Ticket Booking
+
+- Film Listing: Daftar film dengan poster, sinopsis, jadwal
+- Seat Selection: Pilih kursi dengan visualisasi real-time
+- Dynamic Pricing: Harga ticket berdasarkan tipe (Regular/VIP)
+- Membership Discount: Diskon otomatis untuk member VIP
+- Snack Add-on: Opsi untuk menambahkan snack ke pemesanan
+
+### 3. Payment & Invoice
+
+- Payment Simulation: Pilih metode pembayaran (Cash, Card, E-wallet)
+- Automatic Calculation: Total harga dengan pajak dan biaya admin
+- Invoice Generation: Invoice detail setelah pembayaran berhasil
+- Order Storage: Semua order tersimpan di database untuk audit trail
+
+### 4. Admin Dashboard
+
+- Order Monitoring: Lihat semua order dan detail pelanggan
+- User Management: Lihat daftar user, upgrade ke VIP
+- Statistics: Dashboard dengan statistik basic (total orders, revenue)
+- Access Control: Hanya admin yang bisa mengakses fitur ini
+
+---
+
+## Installation dan Setup
+
+### Prerequisites
+
+- Python 3.8 atau lebih baru
+- pip package manager
+- Windows PowerShell atau Command Prompt
+
+### Langkah-Langkah Instalasi
+
+#### 1. Clone Repository
+
+```powershell
+git clone https://github.com/MuhammadHaikhalAlHakim003/AbsoluteCinematic.git
+cd AbsoluteCinematic
+```
+
+#### 2. Buat Virtual Environment (Rekomendasi)
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-3. Instal dependensi (minimal):
+#### 3. Instal Dependencies
 
 ```powershell
 pip install --upgrade pip
 pip install flask werkzeug
 ```
 
-Jika ada file `requirements.txt`, jalankan `pip install -r requirements.txt`.
-
-4. (Opsional) Buat akun admin awal menggunakan seed script:
+Atau jika ada file requirements.txt:
 
 ```powershell
-python scripts\seed_admin.py --email admin@example.com --password secret --name "Admin Utama"
+pip install -r requirements.txt
 ```
 
-Script akan membuat user baru atau meng-update user yang sudah ada menjadi `role='admin'`.
+#### 4. Setup Database & Admin User (Opsional)
 
-5. Jalankan aplikasi:
+Database akan dibuat otomatis saat aplikasi pertama kali dijalankan. Untuk membuat user admin:
+
+```powershell
+python scripts/seed_admin.py --email admin@cinema.com --password admin123 --name "Admin Utama"
+```
+
+#### 5. Jalankan Aplikasi
 
 ```powershell
 python app.py
 ```
 
-6. Buka browser dan akses:
+Output yang diharapkan:
 
-- Home: `http://127.0.0.1:5000/`
-- Login: `http://127.0.0.1:5000/login`
-- Register: `http://127.0.0.1:5000/register`
-- Admin (hanya untuk admin): `http://127.0.0.1:5000/admin` atau `http://127.0.0.1:5000/users`
+```
+ * Running on http://127.0.0.1:5000
+ * Debug mode: on
+```
 
----
+#### 6. Akses Aplikasi di Browser
 
-## Struktur Database (singkat)
-
-- Tabel `users`:
-  - `id, name, email, password, membership, created_at, role`
-- Tabel `orders`:
-  - `id, movie_id, movie_title, seat, ticket_type, showtime, ticket_price, admin_fee, price, membership, snack_included, customer, email, date, payment_method`
-
-Catatan: skema dibuat otomatis oleh fungsi `init_db()` pada `app.py`.
-
----
-
-## Keamanan & Catatan Penting
-
-- Jangan commit `database.db` ke repository publik.
-- Simpan `app.secret_key` dan credential sensitif melalui environment variables jika melakukan deploy.
-- Endpoint admin dilindungi oleh decorator `admin_required`, tetapi untuk produksi sebaiknya tambahkan CSRF protection, validasi input yang lebih ketat, dan HTTPS.
+| Fitur           | URL                                      |
+| --------------- | ---------------------------------------- |
+| Homepage        | http://127.0.0.1:5000/                   |
+| Register        | http://127.0.0.1:5000/register           |
+| Login           | http://127.0.0.1:5000/login              |
+| Book Ticket     | http://127.0.0.1:5000/book               |
+| Payment         | http://127.0.0.1:5000/payment            |
+| Invoice         | http://127.0.0.1:5000/invoice            |
+| Profile         | http://127.0.0.1:5000/profile            |
+| Admin Dashboard | http://127.0.0.1:5000/admin (admin only) |
+| Manage Users    | http://127.0.0.1:5000/users (admin only) |
 
 ---
 
-## Untuk laporan UAS (bagian yang sebaiknya Anda sertakan)
+## Database Schema
 
-Masukkan bagian-bagian berikut di laporan UAS Anda:
+### Tabel: users
 
-- Tujuan & ruang lingkup aplikasi
-- Diagram kelas (sudah ada di `docs/class_diagram.puml`) — sertakan gambar PNG atau PlantUML
-- ER Diagram (tabel `users` dan `orders`) — Anda bisa buat `docs/er_diagram.puml` atau jelaskan skema tabel
-- Sequence diagram untuk alur booking → payment → invoice (`docs/sequence_diagram.puml` direkomendasikan)
-- Penjelasan OOP: jelaskan kelas `User/Customer/Admin`, polymorphism pada `Ticket`/`VIPTicket`, dan factory `create_ticket()`
-- Penjelasan alur: register → login → book → payment → invoice
-- Pengujian: sertakan screenshot manual dari alur dan, bila ada, hasil unit tests
-- Kekurangan & pengembangan lanjutan (e.g. migrasi ke PostgreSQL, menambahkan tests, memperkuat keamanan)
+Menyimpan data pengguna aplikasi
+
+| Kolom      | Tipe                                | Deskripsi                           |
+| ---------- | ----------------------------------- | ----------------------------------- |
+| id         | INTEGER PRIMARY KEY                 | Unique identifier                   |
+| name       | TEXT NOT NULL                       | Nama pengguna                       |
+| email      | TEXT UNIQUE NOT NULL                | Email (unique)                      |
+| password   | TEXT NOT NULL                       | Password (hashed dengan Werkzeug)   |
+| membership | TEXT DEFAULT 'regular'              | Status membership: regular atau vip |
+| created_at | TIMESTAMP DEFAULT CURRENT_TIMESTAMP | Tanggal registrasi                  |
+| role       | TEXT DEFAULT 'user'                 | Role: user atau admin               |
+
+### Tabel: orders
+
+Menyimpan data pemesanan tiket
+
+| Kolom          | Tipe                | Deskripsi                      |
+| -------------- | ------------------- | ------------------------------ |
+| id             | INTEGER PRIMARY KEY | Unique order ID                |
+| movie_id       | INTEGER             | ID film yang dipesan           |
+| movie_title    | TEXT                | Judul film                     |
+| seat           | TEXT                | Nomor kursi (e.g., A1, B5)     |
+| ticket_type    | TEXT                | Tipe tiket: regular atau vip   |
+| showtime       | TEXT                | Jadwal tayang (e.g., 14:00)    |
+| ticket_price   | REAL                | Harga dasar tiket              |
+| admin_fee      | REAL                | Biaya admin yang ditambahkan   |
+| price          | REAL                | Total harga yang dibayar       |
+| membership     | TEXT                | Status membership saat membeli |
+| snack_included | INTEGER (bool)      | 1 jika ada snack, 0 jika tidak |
+| customer       | TEXT                | Nama customer                  |
+| email          | TEXT                | Email customer                 |
+| date           | TIMESTAMP           | Tanggal pemesanan              |
+| payment_method | TEXT                | Metode pembayaran              |
 
 ---
 
-## Testing
+## Konsep OOP yang Diimplementasikan
 
-Saat ini belum ada file test otomatis di repo. Rekomendasi untuk laporan:
+### 1. Class Hierarchy
 
-- Tambahkan `tests/test_ticket.py` untuk memeriksa harga tiket (Regular vs VIP)
-- Tambahkan `tests/test_discounts.py` untuk memeriksa `apply_membership_discount()`
-- Jalankan dengan `pytest` setelah menginstall `pytest`:
+```
+User (base class)
+├── Customer (user regular)
+└── Admin (user dengan privilege admin)
+```
+
+### 2. Ticket Polymorphism
+
+```
+Ticket (base class)
+├── RegularTicket (harga standard)
+└── VIPTicket (harga premium + benefits)
+```
+
+### 3. Factory Pattern
+
+```python
+def create_ticket(ticket_type, price):
+    if ticket_type == 'vip':
+        return VIPTicket(price)
+    else:
+        return RegularTicket(price)
+```
+
+### 4. Encapsulation
+
+- Attribute private dengan prefix underscore (e.g., \_password)
+- Getter dan setter methods untuk controlled access
+
+### 5. Business Logic Methods
+
+- apply_membership_discount() - Hitung diskon berdasarkan membership
+- calculate_admin_fee() - Hitung biaya admin (persentase dari total)
+- validate_email() - Validasi format email sebelum simpan
+
+---
+
+## Security Implementation
+
+### Password Hashing
+
+```python
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# Generate
+hashed = generate_password_hash('password123')
+
+# Verify
+check_password_hash(hashed, 'password123')  # True
+```
+
+### Session Management
+
+- Session disimpan di memory (untuk development)
+- Production: gunakan Redis atau database session store
+- Cookie secure flag recommended untuk HTTPS
+
+### Access Control
+
+```python
+@admin_required
+def admin_dashboard():
+    # Only accessible by users dengan role='admin'
+    pass
+```
+
+### Input Validation
+
+- Email format validation dengan regex
+- SQL injection prevention dengan parameterized queries
+- CSRF token dapat ditambahkan untuk production
+
+---
+
+## Workflow Diagram
+
+### User Registration & Login Flow
+
+```
+User Input Email & Password
+    ↓
+Validate Format & Check Unique Email
+    ↓
+Hash Password dengan Werkzeug
+    ↓
+Save ke Database (users table)
+    ↓
+Success: Redirect to Login
+```
+
+### Booking & Payment Flow
+
+```
+Browse Films (home.html)
+    ↓
+Select Film & Showtime (book.html)
+    ↓
+Choose Seat & Ticket Type
+    ↓
+Select Payment Method (payment.html)
+    ↓
+Process Payment (simulasi - langsung sukses)
+    ↓
+Save Order ke Database (orders table)
+    ↓
+Generate Invoice (invoice.html)
+    ↓
+View Order History (profile.html)
+```
+
+---
+
+## Testing dan Quality Assurance
+
+### Manual Testing Checklist
+
+- Registrasi dengan email valid berhasil
+- Login dengan email/password benar berhasil
+- Login dengan password salah ditolak
+- Book tiket order tersimpan di database
+- Invoice menampilkan detail lengkap
+- Admin bisa lihat semua orders
+- Regular user tidak bisa akses /admin
+- Membership discount dihitung dengan benar
+- Admin fee ditambahkan otomatis
+
+### Automated Testing (Rekomendasi)
+
+Untuk meningkatkan kualitas, tambahkan unit tests:
 
 ```powershell
 pip install pytest
-pytest -q
 ```
 
-Jika Anda mau, saya bisa membuat file test dasar dan `requirements.txt`.
+Contoh test file (tests/test_ticket.py):
 
----
+```python
+def test_regular_ticket_price():
+    ticket = RegularTicket(100000)
+    assert ticket.price == 100000
 
-## Deployment singkat (opsional)
+def test_vip_ticket_price():
+    ticket = VIPTicket(100000)
+    assert ticket.price == 150000  # 50% lebih mahal
+```
 
-Untuk selalu online tanpa menyalakan PC lokal, rekomendasi:
-
-- Deploy ke Railway / Render / Heroku / PythonAnywhere — mudah untuk proyek Flask kecil
-- Atau gunakan VPS dan systemd/NSSM untuk menjalankan aplikasi sebagai service
-
-Contoh menjalankan dengan port berbeda:
+Jalankan tests:
 
 ```powershell
-python app.py # default 5000
-# atau ubah app.run di app.py menjadi app.run(host='0.0.0.0', port=8000)
+pytest -v
 ```
 
 ---
 
-## Known issues & TODO
+## API Endpoints Reference
 
-- Unit tests belum ditambahkan (rekomendasi prioritas).
-- Beberapa page memiliki aturan navbar yang berbeda (fixed vs non-fixed) — sudah sebagian disesuaikan.
-- Admin endpoints sekarang dilindungi, tapi bisa ditingkatkan lagi (CSRF, RBAC penuh).
+### Authentication Routes
+
+| Method | Route     | Deskripsi                   | Auth Required |
+| ------ | --------- | --------------------------- | ------------- |
+| GET    | /         | Homepage dengan daftar film | Tidak         |
+| GET    | /register | Tampilkan form registrasi   | Tidak         |
+| POST   | /register | Submit registrasi baru      | Tidak         |
+| GET    | /login    | Tampilkan form login        | Tidak         |
+| POST   | /login    | Submit login                | Tidak         |
+| GET    | /logout   | Logout dan clear session    | Ya            |
+
+### User Routes
+
+| Method | Route    | Deskripsi                        | Auth Required |
+| ------ | -------- | -------------------------------- | ------------- |
+| GET    | /profile | Lihat profile & order history    | Ya            |
+| GET    | /book    | Halaman booking tiket            | Ya            |
+| POST   | /book    | Submit booking                   | Ya            |
+| GET    | /payment | Halaman pemilihan payment method | Ya            |
+| POST   | /payment | Process payment                  | Ya            |
+| GET    | /invoice | Tampilkan invoice order terakhir | Ya            |
+
+### Admin Routes
+
+| Method | Route         | Deskripsi           | Auth Required | Admin Only |
+| ------ | ------------- | ------------------- | ------------- | ---------- |
+| GET    | /admin        | Admin dashboard     | Ya            | Ya         |
+| GET    | /users        | Daftar semua users  | Ya            | Ya         |
+| POST   | /upgrade_user | Upgrade user ke VIP | Ya            | Ya         |
 
 ---
 
-Jika Anda ingin, saya dapat:
+## Deployment Guide
 
-- Menambahkan `requirements.txt` dan file test dasar (opsi: saya kerjakan sekarang),
-- Membuat ER diagram dan sequence diagram di `docs/` (PlantUML),
-- Membantu deploy ke layanan seperti Railway atau PythonAnywhere.
+### Option 1: Local Development (Current Setup)
 
-Beritahu saya opsi mana yang ingin Anda lanjutkan.
+`powershell
+python app.py
+`
 
-1. Aktifkan virtualenv dan jalankan seed script untuk membuat akun admin awal:
+### Option 2: Production Server Preparation
 
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python scripts\seed_admin.py --email admin@example.com --password secret
-```
+Untuk deploy ke production server:
 
-2. Login dengan email `admin@example.com` dan password `secret`, lalu akses `/users` dan `/admin`.
+1. requirements.txt - Dokumentasi semua dependencies
+2. Environment Variables - Simpan config sensitif
+3. WSGI Server - Gunakan Gunicorn atau Waitress
 
-Catatan keamanan: Ganti password default dan simpan kredensial menggunakan environment variables pada deploy.
+---
+
+## File Documentation
+
+### app.py
+
+Main Flask application dengan database initialization, authentication, CRUD operations, dan business logic.
+
+### templates/
+
+Jinja2 HTML templates dengan Bootstrap 5 styling.
+
+### scripts/seed_admin.py
+
+Utility script untuk membuat user admin awal.
+
+---
+
+## Troubleshooting
+
+### Issue: Database Lock Error
+
+Solusi: Pastikan tidak ada instance Flask lain yang running
+
+### Issue: Module Not Found
+
+Solusi: Jalankan pip install flask werkzeug
+
+### Issue: Port 5000 Already in Use
+
+Solusi: Edit app.py dan ubah port
+
+---
+
+## Checklist untuk Presentasi UAS
+
+- Aplikasi dapat dijalankan tanpa error
+- Semua fitur berjalan sesuai requirement
+- Admin login dan dashboard berfungsi
+- User dapat register, login, booking, dan invoice
+- OOP concepts jelas dalam code
+- README dokumentasi lengkap
+- Code clean dan well-structured
+- Git history bersih
+- Security best practices
+
+---
+
+## License dan Author
+
+Proyek ini dibuat untuk tujuan akademis sebagai tugas UAS mata kuliah Pemrograman Berbasis Objek.
+
+Developed by: 2024 A Kelompok 2
+Institution: Universitas Negeri Surabaya
+Course: Pemrograman Berbasis Objek (PBO)
+Term: Semester 3, 2025
+
+Last Updated: December 2025
+Version: 1.3.1
+Repository: https://github.com/MuhammadHaikhalAlHakim003/AbsoluteCinematic
