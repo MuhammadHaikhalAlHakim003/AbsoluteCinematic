@@ -102,6 +102,15 @@ AbsoluteCinematic/
 - Statistics: Dashboard dengan statistik basic (total orders, revenue)
 - Access Control: Hanya admin yang bisa mengakses fitur ini
 
+### 5. Film Management (Admin Only)
+
+- Add New Film: Admin dapat menambahkan film baru ke dalam sistem
+- Edit Film: Ubah detail film seperti judul, genre, durasi, harga, jadwal tayang
+- Delete Film: Hapus film dari sistem (hanya jika belum ada pemesanan)
+- Dynamic Pricing: Atur harga Regular dan VIP untuk setiap film
+- Showtime Management: Kelola jadwal tayang film
+- Database Integration: Film disimpan di database, bukan hardcoded
+
 ---
 
 ## Installation dan Setup
@@ -193,6 +202,24 @@ Menyimpan data pengguna aplikasi
 | membership | TEXT DEFAULT 'regular'              | Status membership: regular atau vip |
 | created_at | TIMESTAMP DEFAULT CURRENT_TIMESTAMP | Tanggal registrasi                  |
 | role       | TEXT DEFAULT 'user'                 | Role: user atau admin               |
+
+### Tabel: movies
+
+Menyimpan data film yang tersedia di bioskop (dapat dikelola admin)
+
+| Kolom           | Tipe                  | Deskripsi                          |
+| --------------- | --------------------- | ---------------------------------- |
+| id              | INTEGER PRIMARY KEY   | Unique film ID                     |
+| title           | TEXT NOT NULL         | Judul film                         |
+| genre           | TEXT                  | Genre film (e.g., Action, Drama)   |
+| duration        | INTEGER               | Durasi film dalam menit            |
+| poster          | TEXT                  | URL poster film                    |
+| showtimes       | TEXT                  | Jadwal tayang (comma-separated)    |
+| regular_price   | INTEGER DEFAULT 50000 | Harga tiket regular dalam Rupiah   |
+| vip_price       | INTEGER DEFAULT 75000 | Harga tiket VIP dalam Rupiah       |
+| available_seats | INTEGER DEFAULT 50    | Jumlah kursi yang tersedia         |
+| created_at      | TIMESTAMP             | Tanggal film ditambahkan ke sistem |
+| updated_at      | TIMESTAMP             | Tanggal film terakhir di-update    |
 
 ### Tabel: orders
 
@@ -402,11 +429,17 @@ pytest -v
 
 ### Admin Routes
 
-| Method | Route         | Deskripsi           | Auth Required | Admin Only |
-| ------ | ------------- | ------------------- | ------------- | ---------- |
-| GET    | /admin        | Admin dashboard     | Ya            | Ya         |
-| GET    | /users        | Daftar semua users  | Ya            | Ya         |
-| POST   | /upgrade_user | Upgrade user ke VIP | Ya            | Ya         |
+| Method | Route                     | Deskripsi             | Auth Required | Admin Only |
+| ------ | ------------------------- | --------------------- | ------------- | ---------- |
+| GET    | /admin                    | Admin dashboard       | Ya            | Ya         |
+| GET    | /users                    | Daftar semua users    | Ya            | Ya         |
+| POST   | /upgrade_user             | Upgrade user ke VIP   | Ya            | Ya         |
+| GET    | /admin/movies             | Daftar semua film     | Ya            | Ya         |
+| GET    | /admin/movies/add         | Form tambah film baru | Ya            | Ya         |
+| POST   | /admin/movies/add         | Submit film baru      | Ya            | Ya         |
+| GET    | /admin/movies/edit/<id>   | Form edit film        | Ya            | Ya         |
+| POST   | /admin/movies/edit/<id>   | Submit perubahan film | Ya            | Ya         |
+| POST   | /admin/movies/delete/<id> | Hapus film            | Ya            | Ya         |
 
 ---
 
@@ -436,11 +469,67 @@ Main Flask application dengan database initialization, authentication, CRUD oper
 
 ### templates/
 
-Jinja2 HTML templates dengan Bootstrap 5 styling.
+Jinja2 HTML templates dengan Bootstrap 5 styling:
+
+- home.html - Landing page dengan daftar film terbaru
+- register.html - Form registrasi user baru
+- login.html - Form login untuk user yang sudah terdaftar
+- book.html - Interface booking (pilih film, kursi, jadwal tayang)
+- payment.html - Halaman pemilihan metode pembayaran
+- invoice.html - Tampilan invoice/konfirmasi order
+- profile.html - Halaman profil user dengan order history
+- admin.html - Dashboard admin untuk monitoring orders
+- users.html - Halaman manajemen user (upgrade VIP)
+- admin_movies.html - Halaman daftar film yang dapat dikelola admin
+- movie_form.html - Form untuk tambah/edit film (digunakan admin)
 
 ### scripts/seed_admin.py
 
 Utility script untuk membuat user admin awal.
+
+---
+
+## Cara Menggunakan Film Management Admin
+
+### Akses Film Management
+
+1. Login sebagai admin
+2. Klik "Admin Panel" di navbar
+3. Klik "Kelola Film" untuk masuk ke halaman manajemen film
+
+### Menambah Film Baru
+
+1. Di halaman "Kelola Film", klik tombol "Tambah Film Baru"
+2. Isi form dengan data film:
+   - Judul Film (wajib)
+   - Genre (contoh: Action, Drama, Comedy)
+   - Durasi (dalam menit, harus angka)
+   - URL Poster (link gambar film)
+   - Jadwal Tayang (pisahkan dengan koma, contoh: "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM")
+   - Harga Regular (dalam Rupiah)
+   - Harga VIP (dalam Rupiah)
+3. Klik "Simpan" untuk menambahkan film
+
+### Mengedit Film yang Sudah Ada
+
+1. Di halaman "Kelola Film", cari film yang ingin diedit
+2. Klik tombol "Edit" pada film tersebut
+3. Ubah data sesuai kebutuhan
+4. Klik "Simpan" untuk menyimpan perubahan
+
+### Menghapus Film
+
+1. Di halaman "Kelola Film", cari film yang ingin dihapus
+2. Klik tombol "Hapus"
+3. Konfirmasi penghapusan (tidak dapat dibatalkan)
+4. Film akan dihapus dari sistem
+
+### Catatan Penting
+
+- Film hanya dapat dihapus jika belum memiliki pemesanan
+- Harga film (regular dan VIP) akan otomatis ditampilkan saat user membooking
+- Jadwal tayang yang diinput akan tampil di dropdown pemilihan showtime
+- Default film dari sistem akan otomatis dimuat saat aplikasi pertama kali dijalankan
 
 ---
 
@@ -484,5 +573,5 @@ Course: Pemrograman Berbasis Objek (PBO)
 Term: Semester 3, 2025
 
 Last Updated: December 2025
-Version: 1.3.2
+Version: 1.4.1
 Repository: https://github.com/MuhammadHaikhalAlHakim003/AbsoluteCinematic

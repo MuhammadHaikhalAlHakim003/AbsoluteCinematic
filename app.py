@@ -41,6 +41,24 @@ def init_db():
             cur.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
         except Exception:
             pass
+    # movies table - untuk menyimpan data film yang dapat dikelola admin
+    cur.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS movies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            genre TEXT,
+            duration INTEGER,
+            poster TEXT,
+            showtimes TEXT,
+            regular_price INTEGER DEFAULT 50000,
+            vip_price INTEGER DEFAULT 75000,
+            available_seats INTEGER DEFAULT 50,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        '''
+    )
     # orders table
     cur.execute(
         '''
@@ -230,6 +248,129 @@ def admin_required(f):
         flash('Akses ditolak: hanya admin yang dapat mengakses halaman ini')
         return redirect(url_for('home'))
     return decorated
+
+
+# ===== MOVIE MANAGEMENT FUNCTIONS =====
+def get_all_movies():
+    """Ambil semua film dari database"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM movies ORDER BY id DESC")
+    movies_list = cur.fetchall()
+    conn.close()
+    return [dict(m) for m in movies_list]
+
+
+def get_movie_by_id(movie_id):
+    """Ambil film berdasarkan ID"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM movies WHERE id = ?", (movie_id,))
+    movie = cur.fetchone()
+    conn.close()
+    return dict(movie) if movie else None
+
+
+def add_movie(title, genre, duration, poster, showtimes_str, regular_price, vip_price):
+    """Tambah film baru ke database"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    try:
+        cur.execute(
+            """INSERT INTO movies (title, genre, duration, poster, showtimes, regular_price, vip_price, created_at, updated_at) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (title, genre, duration, poster, showtimes_str, regular_price, vip_price, now, now)
+        )
+        conn.commit()
+        movie_id = cur.lastrowid
+        conn.close()
+        return get_movie_by_id(movie_id)
+    except Exception as e:
+        conn.close()
+        return None
+
+
+def update_movie(movie_id, title, genre, duration, poster, showtimes_str, regular_price, vip_price):
+    """Update film yang sudah ada"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    try:
+        cur.execute(
+            """UPDATE movies SET title=?, genre=?, duration=?, poster=?, showtimes=?, regular_price=?, vip_price=?, updated_at=? 
+               WHERE id=?""",
+            (title, genre, duration, poster, showtimes_str, regular_price, vip_price, now, movie_id)
+        )
+        conn.commit()
+        conn.close()
+        return get_movie_by_id(movie_id)
+    except Exception as e:
+        conn.close()
+        return None
+
+
+def delete_movie(movie_id):
+    """Hapus film dari database"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM movies WHERE id=?", (movie_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        conn.close()
+        return False
+
+
+def initialize_default_movies():
+    """Seed database dengan film-film default jika database kosong"""
+    db_movies = get_all_movies()
+    if db_movies:
+        return  # Database sudah ada movies
+    
+    default_movies = [
+        ("Avengers: Doomsday", "Action / Superhero", 165, 
+         "https://posterspy.com/wp-content/uploads/2024/10/Doomsday-by-VISCOM.jpg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Superman: Legacy", "Action / Superhero", 145,
+         "https://posterspy.com/wp-content/uploads/2023/11/20231130_142631_0-glazed-intensity-10-V1.jpg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Spider-Man: No Way Home", "Action / Sci-Fi", 135,
+         "https://cdn.marvel.com/content/2x/spider-mannowayhome_lob_crd_03.jpg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Batman: The Brave and The Bold", "Action / Crime", 150,
+         "https://i.pinimg.com/736x/c4/8b/ed/c48bedde3a9cb8b745a71369627a5005.jpg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Avatar 3", "Sci-Fi / Adventure", 170,
+         "https://m.media-amazon.com/images/M/MV5BZDYxY2I1OGMtN2Y0MS00ZmU1LTgyNDAtODA0MzAyYjI0N2Y2XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("How to Train Your Dragon: Live-Action", "Adventure / Fantasy", 140,
+         "https://m.media-amazon.com/images/M/MV5BODA5Y2M0NjctNWQzMy00ODRhLWE0MzUtYmE1YTAzZjYyYmQyXkEyXkFqcGc@._V1_.jpg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Frozen 2", "Animation / Family", 120,
+         "https://myhotposters.com/cdn/shop/products/mL3767_grande.jpg?v=1748534166",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Inside Out 2", "Animation / Family", 110,
+         "https://upload.wikimedia.org/wikipedia/id/thumb/9/9f/Inside_Out_2_Poster_Indonesian.webp/1000px-Inside_Out_2_Poster_Indonesian.webp.png",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Mission Impossible: Reckoning Part 2", "Action / Thriller", 160,
+         "https://posterspy.com/wp-content/uploads/2023/06/M.I7v4-1.jpg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Mufasa: The Lion King", "Drama / Family", 130,
+         "https://www.laughingplace.com/uploads/ddimages/2024/12/06/7-new-posters-released-for-mufasa-the-lion-king-including-imax-dolby-4dx-and-other-special-formats.jpeg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Sonic the Hedgehog 3", "Action / Comedy", 120,
+         "https://i0.wp.com/mynintendonews.com/wp-content/uploads/2024/11/sonic_movie_3-poster.jpeg?resize=691%2C1024&ssl=1",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+        ("Deadpool & Wolverine", "Action / Comedy", 130,
+         "https://cdn.marvel.com/content/2x/dp3_1sht_digital_srgb_ka_swords_v5_resized.jpg",
+         "10:00 AM, 01:00 PM, 04:00 PM, 07:00 PM, 10:00 PM", 50000, 75000),
+    ]
+    
+    for title, genre, duration, poster, showtimes, regular_price, vip_price in default_movies:
+        add_movie(title, genre, duration, poster, showtimes, regular_price, vip_price)
 
 
 # DATA FILM (STATIC)
@@ -423,15 +564,33 @@ def create_ticket(ticket_type, seat):
 # ROUTES
 @app.route('/')
 def home():
-    return render_template('home.html', movies=movies)
+    db_movies = get_all_movies()
+    # Jika database kosong, gunakan static data untuk demo
+    if not db_movies:
+        db_movies = movies
+    return render_template('home.html', movies=db_movies)
 
 
 @app.route('/book/<int:movie_id>', methods=['GET', 'POST'])
 def book(movie_id):
-    movie = next((m for m in movies if m['id'] == movie_id), None)
-
-    if not movie:
-        return "Movie not found", 404
+    # Get movie from database
+    movie_data = get_movie_by_id(movie_id)
+    
+    if not movie_data:
+        return "Film tidak ditemukan", 404
+    
+    # Convert database movie to format yang digunakan template
+    movie = {
+        'id': movie_data['id'],
+        'title': movie_data['title'],
+        'genre': movie_data['genre'],
+        'duration': movie_data['duration'],
+        'poster': movie_data['poster'],
+        'showtimes': [st.strip() for st in movie_data['showtimes'].split(',')] if movie_data['showtimes'] else [],
+        'regular_price': movie_data['regular_price'],
+        'vip_price': movie_data['vip_price'],
+        'seats': generate_seats()  # Generate available seats for this movie
+    }
 
     if request.method == 'POST':
         # If user logged in, use their account info; otherwise use form inputs
@@ -488,7 +647,13 @@ def book(movie_id):
         # For simplicity, we'll create one order entry with all seats
         # You can modify this to create separate orders per seat if needed
         ticket = create_ticket(ticket_type, seat_list[0])
-        ticket_price_per_seat = ticket.calculate_price()
+        
+        # Get ticket price dari database movie
+        if ticket_type.lower() == 'vip':
+            ticket_price_per_seat = movie['vip_price']
+        else:
+            ticket_price_per_seat = movie['regular_price']
+        
         # Apply membership discount via helper
         discounted_price_per_seat = apply_membership_discount(ticket_price_per_seat, membership)
         admin_fee_per_seat = 5000  # Biaya admin per kursi
@@ -497,8 +662,8 @@ def book(movie_id):
         price = ticket_price + admin_fee_total  # Total pembayaran (termasuk admin)
         snack_included = True if membership == 'vip' else False
 
-        # ambil judul film untuk disimpan di order
-        movie_title = next((m['title'] for m in movies if m['id'] == movie_id), "")
+        # Ambil judul film dari database movie
+        movie_title = movie['title']
 
         order = {
             "id": len(orders) + 1,
@@ -571,10 +736,21 @@ def finish():
     session.pop('pending_order', None)
 
     movie_id = pending_order['movie_id']
-    movie = next((m for m in movies if m['id'] == movie_id), None)
+    movie_data = get_movie_by_id(movie_id)
     
-    if not movie:
+    if not movie_data:
         return redirect(url_for('home'))
+    
+    # Convert database movie to template format
+    movie = {
+        'id': movie_data['id'],
+        'title': movie_data['title'],
+        'genre': movie_data['genre'],
+        'duration': movie_data['duration'],
+        'poster': movie_data['poster'],
+        'regular_price': movie_data['regular_price'],
+        'vip_price': movie_data['vip_price']
+    }
     
     # Render invoice page dengan order dan movie data
     return render_template('invoice.html', order=pending_order, movie=movie)
@@ -585,7 +761,8 @@ def finish():
 def admin():
     # read orders from DB
     all_orders = get_all_orders_db()
-    return render_template('admin.html', orders=all_orders, movies=movies)
+    db_movies = get_all_movies()
+    return render_template('admin.html', orders=all_orders, movies=db_movies)
 
 
 @app.route('/users')
@@ -619,6 +796,114 @@ def admin_upgrade(user_id):
     conn.commit()
     conn.close()
     return redirect(url_for('list_users'))
+
+
+# ===== MOVIE MANAGEMENT ROUTES =====
+@app.route('/admin/movies')
+@admin_required
+def admin_movies():
+    """Tampilkan daftar semua film untuk dikelola admin"""
+    db_movies = get_all_movies()
+    return render_template('admin_movies.html', movies=db_movies)
+
+
+@app.route('/admin/movies/add', methods=['GET', 'POST'])
+@admin_required
+def add_movie_route():
+    """Halaman untuk menambah film baru"""
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        genre = request.form.get('genre', '').strip()
+        duration = request.form.get('duration', '0')
+        poster = request.form.get('poster', '').strip()
+        showtimes_str = request.form.get('showtimes', '').strip()  # e.g., "10:00 AM, 01:00 PM, 04:00 PM"
+        regular_price = request.form.get('regular_price', '50000')
+        vip_price = request.form.get('vip_price', '75000')
+        
+        # Validasi
+        if not title or not genre or not duration or not poster or not showtimes_str:
+            flash('Semua field harus diisi')
+            return render_template('movie_form.html', movie=None)
+        
+        try:
+            duration = int(duration)
+            regular_price = int(regular_price)
+            vip_price = int(vip_price)
+        except ValueError:
+            flash('Duration dan harga harus berupa angka')
+            return render_template('movie_form.html', movie=None)
+        
+        # Tambah ke database
+        movie = add_movie(title, genre, duration, poster, showtimes_str, regular_price, vip_price)
+        if movie:
+            flash(f'Film "{title}" berhasil ditambahkan!')
+            return redirect(url_for('admin_movies'))
+        else:
+            flash('Gagal menambahkan film')
+            return render_template('movie_form.html', movie=None)
+    
+    return render_template('movie_form.html', movie=None)
+
+
+@app.route('/admin/movies/edit/<int:movie_id>', methods=['GET', 'POST'])
+@admin_required
+def edit_movie_route(movie_id):
+    """Halaman untuk mengedit film"""
+    movie = get_movie_by_id(movie_id)
+    if not movie:
+        flash('Film tidak ditemukan')
+        return redirect(url_for('admin_movies'))
+    
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        genre = request.form.get('genre', '').strip()
+        duration = request.form.get('duration', '0')
+        poster = request.form.get('poster', '').strip()
+        showtimes_str = request.form.get('showtimes', '').strip()
+        regular_price = request.form.get('regular_price', '50000')
+        vip_price = request.form.get('vip_price', '75000')
+        
+        # Validasi
+        if not title or not genre or not duration or not poster or not showtimes_str:
+            flash('Semua field harus diisi')
+            return render_template('movie_form.html', movie=movie)
+        
+        try:
+            duration = int(duration)
+            regular_price = int(regular_price)
+            vip_price = int(vip_price)
+        except ValueError:
+            flash('Duration dan harga harus berupa angka')
+            return render_template('movie_form.html', movie=movie)
+        
+        # Update database
+        updated_movie = update_movie(movie_id, title, genre, duration, poster, showtimes_str, regular_price, vip_price)
+        if updated_movie:
+            flash(f'Film "{title}" berhasil diupdate!')
+            return redirect(url_for('admin_movies'))
+        else:
+            flash('Gagal mengupdate film')
+            return render_template('movie_form.html', movie=movie)
+    
+    return render_template('movie_form.html', movie=movie)
+
+
+@app.route('/admin/movies/delete/<int:movie_id>', methods=['POST'])
+@admin_required
+def delete_movie_route(movie_id):
+    """Hapus film dari database"""
+    movie = get_movie_by_id(movie_id)
+    if not movie:
+        flash('Film tidak ditemukan')
+        return redirect(url_for('admin_movies'))
+    
+    title = movie.get('title', 'Film')
+    if delete_movie(movie_id):
+        flash(f'Film "{title}" berhasil dihapus!')
+        return redirect(url_for('admin_movies'))
+    else:
+        flash('Gagal menghapus film')
+        return redirect(url_for('admin_movies'))
 
 
 # ---------- AUTH ROUTES ----------
@@ -684,4 +969,6 @@ def logout():
 if __name__ == '__main__':
     # Initialize database (users table)
     init_db()
+    # Seed default movies if database is empty
+    initialize_default_movies()
     app.run(debug=True)
