@@ -1,3 +1,4 @@
+# Imports untuk Flask dan library pendukung
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from datetime import datetime
 import sqlite3
@@ -5,19 +6,22 @@ import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
+# Inisialisasi aplikasi Flask
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Diperlukan untuk menggunakan session
+app.secret_key = 'your_secret_key_here'  # Kunci untuk enkripsi session
 
-# Database file
+# Konfigurasi database
 DB_PATH = os.path.join(os.path.dirname(__file__), 'database.db')
 
-
+# Fungsi koneksi database
 def get_db_connection():
+    """Membuat koneksi ke database SQLite"""
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn.row_factory = sqlite3.Row  # Kembalikan hasil query sebagai dictionary
     return conn
 
 
+# Inisialisasi database
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -85,10 +89,12 @@ def init_db():
     conn.close()
 
 
+# Helper functions untuk user management
 def create_user(name, email, password, membership='member'):
+    """Membuat user baru dan menyimpan ke database"""
     conn = get_db_connection()
     cur = conn.cursor()
-    hashed = generate_password_hash(password)
+    hashed = generate_password_hash(password)  # Hash password untuk keamanan
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     try:
         cur.execute("INSERT INTO users (name, email, password, membership, created_at, role) VALUES (?, ?, ?, ?, ?, ?)",
@@ -103,6 +109,7 @@ def create_user(name, email, password, membership='member'):
 
 
 def get_user_by_email(email):
+    """Cari user berdasarkan email"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE email = ?", (email,))
@@ -112,6 +119,7 @@ def get_user_by_email(email):
 
 
 def get_user_by_id(user_id):
+    """Cari user berdasarkan ID"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
@@ -120,7 +128,9 @@ def get_user_by_id(user_id):
     return row
 
 
+# Helper functions untuk order management
 def save_order_db(order):
+    """Simpan order ke database"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
@@ -485,12 +495,12 @@ movies = [
     }
 ]
 
+# Penyimpanan sementara order sebelum pembayaran
+orders = []
 
-orders = []  # tempat penyimpanan sementara
-
-
-# OOP CLASSES
+# Class dasar untuk representasi pengguna
 class User:
+    """Representasi user dengan nama dan email"""
     def __init__(self, name, email):
         self.__name = name
         self.__email = email
@@ -502,16 +512,19 @@ class User:
         return self.__email
 
 
+# Class untuk customer yang mewarisi dari User
 class Customer(User):
+    """Customer yang dapat melakukan pemesanan tiket"""
     def __init__(self, name, email):
         super().__init__(name, email)
         self.history = []
 
     def book_ticket(self, movie_id, seat, ticket_type):
+        """Proses pemesanan tiket untuk customer"""
         ticket = create_ticket(ticket_type, seat)
         price = ticket.calculate_price()
 
-        # ambil judul film untuk disimpan di order
+        # Ambil judul film untuk disimpan di order
         movie_title = next((m['title'] for m in movies if m['id'] == movie_id), "")
 
         order = {
@@ -530,27 +543,36 @@ class Customer(User):
         orders.append(order)
         return order
 
-
+# Class untuk admin yang mewarisi dari User
 class Admin(User):
+    """Admin yang dapat melihat semua pemesanan"""
     def view_all_orders(self):
         return orders
 
 
+# Class dasar untuk tiket
 class Ticket:
+    """Representasi tiket dengan tipe dan harga"""
     def __init__(self, seat, ticket_type):
         self.seat = seat
         self.ticket_type = ticket_type
 
     def calculate_price(self):
+        """Hitung harga tiket berdasarkan tipe"""
         return 75000 if self.ticket_type == "VIP" else 50000
 
 
+# Class untuk tiket VIP yang mewarisi dari Ticket
 class VIPTicket(Ticket):
+    """Tiket VIP dengan harga premium"""
     def calculate_price(self):
+        """Harga tiket VIP"""
         return 75000
 
 
+# Factory function untuk membuat tiket sesuai tipe
 def create_ticket(ticket_type, seat):
+    """Membuat object tiket Regular atau VIP"""
     if not ticket_type:
         return Ticket(seat, "Regular")
 
@@ -560,10 +582,10 @@ def create_ticket(ticket_type, seat):
     return Ticket(seat, "Regular")
 
 
-
-# ROUTES
+# Routes aplikasi
 @app.route('/')
 def home():
+    """Halaman utama dengan daftar film"""
     db_movies = get_all_movies()
     # Jika database kosong, gunakan static data untuk demo
     if not db_movies:
@@ -573,13 +595,14 @@ def home():
 
 @app.route('/book/<int:movie_id>', methods=['GET', 'POST'])
 def book(movie_id):
-    # Get movie from database
+    """Halaman pemesanan tiket dan kursi"""
+    # Ambil data film dari database
     movie_data = get_movie_by_id(movie_id)
     
     if not movie_data:
         return "Film tidak ditemukan", 404
     
-    # Convert database movie to format yang digunakan template
+    # Konversi data film database ke format template
     movie = {
         'id': movie_data['id'],
         'title': movie_data['title'],
@@ -589,7 +612,7 @@ def book(movie_id):
         'showtimes': [st.strip() for st in movie_data['showtimes'].split(',')] if movie_data['showtimes'] else [],
         'regular_price': movie_data['regular_price'],
         'vip_price': movie_data['vip_price'],
-        'seats': generate_seats()  # Generate available seats for this movie
+        'seats': generate_seats()  # Generate daftar kursi yang tersedia
     }
 
     if request.method == 'POST':
@@ -906,31 +929,34 @@ def delete_movie_route(movie_id):
         return redirect(url_for('admin_movies'))
 
 
-# ---------- AUTH ROUTES ----------
+# Routes untuk autentikasi pengguna
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    """Halaman registrasi pengguna baru"""
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
         password = request.form.get('password')
         membership = request.form.get('membership', 'member')
 
+        # Validasi input
         if not name or not email or not password:
             flash('Lengkapi semua field')
             return render_template('register.html')
 
+        # Cek email sudah terdaftar
         existing = get_user_by_email(email)
         if existing:
             flash('Email sudah terdaftar')
             return render_template('register.html')
 
+        # Buat user baru
         user = create_user(name, email, password, membership)
         if not user:
             flash('Gagal membuat user (email mungkin sudah terpakai)')
             return render_template('register.html')
 
-        # Auto-login setelah registrasi
-        # `user` is a sqlite3.Row which doesn't implement .get(), so access safely
+        # Auto-login setelah registrasi berhasil
         role = user['role'] if user and 'role' in user.keys() else 'user'
         session['user'] = { 'id': user['id'], 'name': user['name'], 'email': user['email'], 'membership': user['membership'], 'role': role }
         return redirect(url_for('home'))
@@ -940,6 +966,7 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Halaman login pengguna"""
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -948,6 +975,7 @@ def login():
             flash('Email tidak ditemukan')
             return render_template('login.html')
 
+        # Verifikasi password dengan hash
         if not check_password_hash(user['password'], password):
             flash('Password salah')
             return render_template('login.html')
